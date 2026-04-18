@@ -26,7 +26,7 @@ ctest          # run all tests via CTest
 ./test_integration  # run integration tests
 ```
 
-Tests use Google Test (fetched via CMake FetchContent) and a raw `assert`-based runner in `cpp/tests/test_kit_vcs.cpp`. Each test function calls `cleanup_test_environment()` and operates on a temporary `.kit/` directory created in the working directory.
+Tests use Google Test (fetched via CMake FetchContent). Unit tests live in `cpp/tests/unit/` and integration tests in `cpp/tests/integration/`. Each test function operates on a temporary `.kit/` directory created in the working directory.
 
 ## Architecture
 
