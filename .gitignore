@@ -26,7 +26,6 @@ cmake_install.cmake
 
 # Kit repository files
 /.kit/
-./build
 
 # Test directories
 /kit-vcs-test/
@@ -40,3 +39,4 @@ cmake_install.cmake
 Thumbs.db
 .DS_Store
 .worktrees/
+cpp/build/
