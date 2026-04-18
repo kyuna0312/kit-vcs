@@ -33,32 +33,55 @@ Tests use Google Test (fetched via CMake FetchContent) and a raw `assert`-based 
 ### Object Storage Model
 
 `.kit/` mirrors Git's object store:
-- `objects/` — commit objects stored as flat files named by SHA1 hash
+- `objects/` — blob, tree, and commit objects stored as flat files named by SHA1 hash
 - `refs/heads/` — branch refs, one file per branch containing commit hash
 - `HEAD` — either a ref string (`ref: refs/heads/master`) or a bare commit hash
-- `index` — newline-delimited list of staged file paths
+- `index` — staged file entries (path + blob hash pairs)
+- `stash/` — stashed snapshots
 
 ### Code Layout
 
-All logic lives in **header files** under `cpp/src/` (mostly `inline` functions). `cpp/src/main.cpp` and `cpp/src/hash_object.cpp` are the only `.cpp` files.
+The codebase uses **split compilation**: each module has a `.hpp` declaration and a `.cpp` definition. All source lives under `cpp/src/`.
 
 | Path | Role |
 |------|------|
-| `cpp/src/kit_vcs.hpp` | Top-level namespace `kit_vcs` — init, stage, commit, log, and aggregates all command headers |
-| `cpp/src/cli/cli.hpp` | `cli` namespace — command dispatch using `cxxopts`, one `handle_*` function per command |
-| `cpp/src/commands/*.hpp` | Per-command logic (branch, checkout, commit, diff, merge, reset, stash, status) |
-| `cpp/src/utils/kit_utils.hpp` | Core file I/O helpers, commit creation, diff, three-way merge |
-| `cpp/src/utils/hash_object.hpp` | SHA1 hashing via OpenSSL |
-| `cpp/src/utils/constants.hpp` | Path constants (`KIT_DIR`, `OBJECTS_DIR`, `HEAD_FILE`, `INDEX_FILE`, `HEADS_DIR`) |
-| `cpp/src/utils/error_handler.hpp` | `error_handler::print_error()` — writes to stderr |
-| `cpp/src/utils/mock_kit_utils.hpp` | Mock utilities for testing |
+| `cpp/src/main.cpp` | Entry point — calls `kit::cli::run()` |
+| `cpp/src/cli/cli.hpp` / `cli.cpp` | `kit::cli` namespace — command dispatch, routes argv to per-command `run()` |
+| `cpp/src/cli/commands/cmd_*.hpp` / `cmd_*.cpp` | Per-command logic: `add`, `branch`, `checkout`, `commit`, `diff`, `init`, `log`, `merge`, `reset`, `stash`, `status` |
+| `cpp/src/core/repository.hpp` / `repository.cpp` | `kit::Repository` class — opens/inits the `.kit/` store, reads/writes objects, manages index and refs |
+| `cpp/src/core/refs.hpp` / `refs.cpp` | `kit::Refs` — reads and writes `HEAD` and `refs/heads/` branch pointers |
+| `cpp/src/core/index.hpp` / `index.cpp` | `kit::Index` — staged file list (path → blob hash) |
+| `cpp/src/core/objects/blob.hpp` / `blob.cpp` | `kit::Blob` — file content object |
+| `cpp/src/core/objects/tree.hpp` / `tree.cpp` | `kit::Tree` / `TreeEntry` — directory snapshot (list of blob hash + filename entries) |
+| `cpp/src/core/objects/commit.hpp` / `commit.cpp` | `kit::Commit` — commit object (tree hash, parent, author, timestamp, message) |
+| `cpp/src/utils/hash.hpp` / `hash.cpp` | SHA1 hashing via OpenSSL |
+| `cpp/src/utils/diff.hpp` / `diff.cpp` | Line-level diff utilities |
+| `cpp/src/utils/fs_utils.hpp` / `fs_utils.cpp` | Filesystem helpers |
+| `cpp/src/utils/logger.hpp` / `logger.cpp` | Structured logging; reads `KIT_LOG` env var |
+| `cpp/src/utils/constants.hpp` | Path constants (`KIT_DIR`, `OBJECTS_DIR`, `HEAD_FILE`, `INDEX_FILE`, `HEADS_DIR`, `STASH_DIR`) |
+| `cpp/src/utils/result.hpp` | `Result<T>` error-handling type (header-only) |
+
+### Tests Layout
+
+| Path | Role |
+|------|------|
+| `cpp/tests/unit/test_blob.cpp` | Unit tests for Blob object |
+| `cpp/tests/unit/test_commit.cpp` | Unit tests for Commit object |
+| `cpp/tests/unit/test_index.cpp` | Unit tests for Index |
+| `cpp/tests/unit/test_refs.cpp` | Unit tests for Refs |
+| `cpp/tests/unit/test_tree.cpp` | Unit tests for Tree object |
+| `cpp/tests/integration/test_add_commit.cpp` | Integration: add + commit workflow |
+| `cpp/tests/integration/test_branch_checkout.cpp` | Integration: branch and checkout |
+| `cpp/tests/integration/test_diff.cpp` | Integration: diff output |
+| `cpp/tests/integration/test_init.cpp` | Integration: repository init |
+| `cpp/tests/integration/test_merge.cpp` | Integration: branch merge |
 
 ### Control Flow
 
-`cpp/src/main.cpp` → `cli::handle_command()` → `kit_vcs::*()` → `kit_utils::*()` / `hash_object::*()` / filesystem ops
+`cpp/src/main.cpp` → `kit::cli::run()` → `cmd_<name>::run()` → `kit::Repository` / `kit::Refs` / `kit::Index` / object types / utils
 
 ### Key Design Notes
 
-- **Header-only implementation**: nearly all logic is in `cpp/src/` as `inline` functions. Adding new commands means adding a header in `cpp/src/commands/` and wiring it in `cpp/src/cli/cli.hpp` and `cpp/src/kit_vcs.hpp`.
-- **No tree objects**: commits store file content directly in the objects directory — not a full Git-compatible format.
-- **Planned future structure**: `note.md` outlines a planned refactor into `src/core/`, `src/cli/`, `src/server/` subdirectories — current layout is flatter than this.
+- **Split compilation**: each module is a `.hpp`/`.cpp` pair. Adding a new command means creating `cpp/src/cli/commands/cmd_<name>.hpp` + `.cpp` and wiring it into `cpp/src/cli/cli.cpp`.
+- **Tree objects present**: commits reference a `kit::Tree` (snapshot of staged files), which in turn references `kit::Blob` objects — a three-layer object model (commit → tree → blobs).
+- **Result<T> error handling**: functions return `Result<T>` instead of throwing, keeping error paths explicit throughout core and CLI layers.
