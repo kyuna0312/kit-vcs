@@ -54,7 +54,7 @@ target_link_libraries(kit-vcs PRIVATE kit_core)
 
 enable_testing()
 
-file(GLOB UNIT_SOURCES "tests/unit/*.cpp")
+file(GLOB_RECURSE UNIT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tests/unit/*.cpp")
 if(UNIT_SOURCES)
     add_executable(test_unit ${UNIT_SOURCES})
     target_link_libraries(test_unit PRIVATE kit_core gtest gtest_main)
@@ -64,7 +64,7 @@ if(UNIT_SOURCES)
     add_test(NAME unit COMMAND test_unit)
 endif()
 
-file(GLOB INTEGRATION_SOURCES "tests/integration/*.cpp")
+file(GLOB_RECURSE INTEGRATION_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tests/integration/*.cpp")
 if(INTEGRATION_SOURCES)
     add_executable(test_integration ${INTEGRATION_SOURCES})
     target_link_libraries(test_integration PRIVATE kit_core gtest gtest_main)
