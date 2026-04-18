@@ -40,3 +40,4 @@ cmake_install.cmake
 Thumbs.db
 .DS_Store
 .worktrees/
+cpp/build/
