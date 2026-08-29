@@ -35,6 +35,8 @@ All core commands are implemented:
 - A C++17 compiler
 - OpenSSL (for SHA-1 hashing)
 
+cxxopts and Google Test are fetched automatically via CMake FetchContent.
+
 ### Build
 
 ```bash
@@ -47,8 +49,8 @@ make
 
 Binary output: `cpp/build/kit-vcs`
 
-> On macOS the `CMakeLists.txt` uses Homebrew's OpenSSL path. On Linux, override it if needed:
-> `cmake .. -DOPENSSL_ROOT_DIR=/usr`
+> OpenSSL is located via `find_package(OpenSSL)`. If CMake can't find it (e.g. Homebrew on macOS), point it there:
+> `cmake .. -DOPENSSL_ROOT_DIR=$(brew --prefix openssl)`
 
 ### Run Tests
 

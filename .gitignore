@@ -6,7 +6,6 @@ QWEN.md
 
 # Build output
 build/
-cpp/build/
 CMakeFiles/
 CMakeCache.txt
 Makefile
