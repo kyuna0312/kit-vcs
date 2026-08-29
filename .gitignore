@@ -1,43 +1,40 @@
-# Build directories and files
-/build/
-/CMakeFiles/
-/CMakeCache.txt
+# AI assistant files
+CLAUDE.md
+QWEN.md
+.remember/
+.cache/
+
+# Build output
+build/
+cpp/build/
+CMakeFiles/
+CMakeCache.txt
 Makefile
 cmake_install.cmake
-
-# Object files and executables
 *.o
 *.obj
-*.exe
-*.out
 *.a
 *.so
 *.dll
+*.exe
+*.out
 
-# Temporary files
-*.tmp
-*.log
-*.swp
-*.swo
-*.DS_Store
+# kit repositories created during testing
+.kit/
+kit-vcs-test/
 
-# Generated files
-*.generated.*
-
-# Kit repository files
-/.kit/
-
-# Test directories
-/kit-vcs-test/
-
-# IDE-specific files
-.cache/
+# IDE / editor
 .vscode/
 .idea/
 *.code-workspace
+*.swp
+*.swo
 
-# System files
-Thumbs.db
+# OS files
 .DS_Store
+Thumbs.db
+
+# Misc
+*.tmp
+*.log
 .worktrees/
-cpp/build/
