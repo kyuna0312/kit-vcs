@@ -3,6 +3,16 @@
 
 namespace kit {
 
+namespace {
+// Read a ref file and strip the trailing newline; throws on I/O failure
+std::string read_trimmed(const std::filesystem::path& p) {
+    std::string s = kit::fs::read_file(p);
+    if (!s.empty() && s.back() == '\n') s.pop_back();
+    return s;
+}
+constexpr const char* HEAD_REF_PREFIX = "ref: refs/heads/";
+} // namespace
+
 Refs::Refs(const std::filesystem::path& kit_dir) : kit_dir_(kit_dir) {}
 
 std::filesystem::path Refs::head_path() const { return kit_dir_ / "HEAD"; }
@@ -12,23 +22,19 @@ std::filesystem::path Refs::branch_path(const std::string& name) const {
 
 std::string Refs::current_branch() const {
     try {
-        std::string head = kit::fs::read_file(head_path());
-        if (!head.empty() && head.back() == '\n') head.pop_back();
-        const std::string prefix = "ref: refs/heads/";
-        if (head.rfind(prefix, 0) == 0) return head.substr(prefix.size());
+        std::string head = read_trimmed(head_path());
+        if (head.rfind(HEAD_REF_PREFIX, 0) == 0)
+            return head.substr(std::string(HEAD_REF_PREFIX).size());
     } catch (...) {}
     return "";
 }
 
 Result<std::string> Refs::resolve_head() const {
     try {
-        std::string head = kit::fs::read_file(head_path());
-        if (!head.empty() && head.back() == '\n') head.pop_back();
-        const std::string prefix = "ref: refs/heads/";
-        if (head.rfind(prefix, 0) == 0)
-            return resolve_branch(head.substr(prefix.size()));
-        if (head.empty()) return Result<std::string>::success("");
-        return Result<std::string>::success(head); // bare hash (detached)
+        std::string head = read_trimmed(head_path());
+        if (head.rfind(HEAD_REF_PREFIX, 0) == 0)
+            return resolve_branch(head.substr(std::string(HEAD_REF_PREFIX).size()));
+        return Result<std::string>::success(head); // bare hash (detached) or ""
     } catch (const std::exception& e) {
         return Result<std::string>::failure(e.what());
     }
@@ -39,9 +45,7 @@ Result<std::string> Refs::resolve_branch(const std::string& name) const {
     if (!std::filesystem::exists(p))
         return Result<std::string>::failure("Branch not found: " + name);
     try {
-        std::string hash = kit::fs::read_file(p);
-        if (!hash.empty() && hash.back() == '\n') hash.pop_back();
-        return Result<std::string>::success(hash);
+        return Result<std::string>::success(read_trimmed(p));
     } catch (const std::exception& e) {
         return Result<std::string>::failure(e.what());
     }

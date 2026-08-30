@@ -1,4 +1,5 @@
 #include "repository.hpp"
+#include "core/objects/blob.hpp"
 #include "utils/fs_utils.hpp"
 #include <stdexcept>
 
@@ -51,6 +52,44 @@ Result<std::string> Repository::read_object(const std::string& hash) const {
 
 bool Repository::object_exists(const std::string& hash) const {
     return std::filesystem::exists(objects_dir() / hash);
+}
+
+Result<Commit> Repository::read_commit(const std::string& hash) const {
+    auto r = read_object(hash);
+    if (!r.ok()) return Result<Commit>::failure(r.error);
+    return Result<Commit>::success(Commit::deserialize(*r));
+}
+
+Result<Tree> Repository::read_commit_tree(const std::string& commit_hash) const {
+    auto c = read_commit(commit_hash);
+    if (!c.ok()) return Result<Tree>::failure(c.error);
+    auto t = read_object(c->tree_hash);
+    if (!t.ok()) return Result<Tree>::failure(t.error);
+    return Result<Tree>::success(Tree::deserialize(*t));
+}
+
+std::unordered_map<std::string, std::string>
+Repository::commit_contents(const std::string& commit_hash) const {
+    std::unordered_map<std::string, std::string> out;
+    if (commit_hash.empty()) return out;
+    auto tree = read_commit_tree(commit_hash);
+    if (!tree.ok()) return out;
+    for (const auto& e : tree->entries) {
+        auto blob = read_object(e.hash);
+        if (blob.ok()) out[e.name] = Blob::deserialize(*blob).content;
+    }
+    return out;
+}
+
+Result<void> Repository::checkout_tree(const std::string& commit_hash) const {
+    auto tree = read_commit_tree(commit_hash);
+    if (!tree.ok()) return Result<void>::failure(tree.error);
+    for (const auto& e : tree->entries) {
+        auto blob = read_object(e.hash);
+        if (!blob.ok()) return Result<void>::failure(blob.error);
+        kit::fs::write_file(path_ / e.name, Blob::deserialize(*blob).content);
+    }
+    return Result<void>::ok_result();
 }
 
 std::filesystem::path Repository::path() const { return path_; }

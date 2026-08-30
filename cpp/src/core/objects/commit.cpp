@@ -2,7 +2,6 @@
 #include "utils/hash.hpp"
 #include <sstream>
 #include <cstdlib>
-#include <cstdio>
 
 namespace kit {
 
@@ -47,17 +46,9 @@ Commit Commit::deserialize(const std::string& raw) {
 }
 
 std::string Commit::resolve_author() {
-    const char* env = std::getenv("KIT_AUTHOR");
-    if (env) return std::string(env);
-    char buf[128] = {};
-    FILE* p = popen("whoami", "r");
-    if (p) {
-        if (fgets(buf, sizeof(buf), p)) {}
-        pclose(p);
-        std::string s(buf);
-        if (!s.empty() && s.back() == '\n') s.pop_back();
-        if (!s.empty()) return s;
-    }
+    for (const char* var : {"KIT_AUTHOR", "USER", "USERNAME"})
+        if (const char* v = std::getenv(var); v && *v)
+            return v;
     return "unknown";
 }
 

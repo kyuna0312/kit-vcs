@@ -1,20 +1,15 @@
 #include "cmd_branch.hpp"
-#include "core/repository.hpp"
+#include "common.hpp"
 #include "utils/logger.hpp"
-#include <filesystem>
 #include <iostream>
 #include <string>
 
 namespace kit::cmd_branch {
 
 int run(int argc, char** argv) {
-    auto cwd = std::filesystem::current_path();
-    if (!kit::Repository::exists(cwd)) {
-        logger::error("Not a kit repository.");
-        return 1;
-    }
-    kit::Repository repo(cwd);
-    auto& refs = repo.refs();
+    auto repo = kit::cmd::open_repo();
+    if (!repo) return 1;
+    auto& refs = repo->refs();
 
     if (argc == 1) {
         auto current = refs.current_branch();
@@ -34,11 +29,11 @@ int run(int argc, char** argv) {
     // Create branch at HEAD
     std::string name = argv[1];
     auto head_r = refs.resolve_head();
-    if (!head_r.ok() || head_r.value.value().empty()) {
+    if (!head_r.ok() || head_r->empty()) {
         logger::error("No commits yet — cannot create branch.");
         return 1;
     }
-    auto r = refs.create_branch(name, head_r.value.value());
+    auto r = refs.create_branch(name, *head_r);
     if (!r.ok()) { logger::error(r.error); return 1; }
     logger::info("Created branch: " + name);
     return 0;

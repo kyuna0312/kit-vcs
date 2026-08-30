@@ -9,6 +9,10 @@ struct Result {
     std::optional<T> value;
     std::string error;
     bool ok() const { return value.has_value(); }
+    const T& operator*() const { return *value; }
+    T&       operator*()       { return *value; }
+    const T* operator->() const { return &*value; }
+    T*       operator->()       { return &*value; }
     static Result success(T v) { return {std::move(v), ""}; }
     static Result failure(std::string e) { return {std::nullopt, std::move(e)}; }
 };

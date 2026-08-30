@@ -25,4 +25,16 @@ void ensure_dir(const std::filesystem::path& path) {
         std::filesystem::create_directories(path);
 }
 
+std::vector<std::pair<std::string, std::filesystem::path>>
+working_files(const std::filesystem::path& root) {
+    std::vector<std::pair<std::string, std::filesystem::path>> out;
+    for (const auto& entry : std::filesystem::recursive_directory_iterator(root)) {
+        if (!entry.is_regular_file()) continue;
+        auto rel = std::filesystem::relative(entry.path(), root).string();
+        if (rel.rfind(".kit", 0) == 0) continue;
+        out.emplace_back(std::move(rel), entry.path());
+    }
+    return out;
+}
+
 } // namespace kit::fs

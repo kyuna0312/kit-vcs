@@ -1,5 +1,5 @@
 #include "cmd_stash.hpp"
-#include "core/repository.hpp"
+#include "common.hpp"
 #include "utils/logger.hpp"
 #include "utils/fs_utils.hpp"
 #include <filesystem>
@@ -13,9 +13,10 @@ static std::filesystem::path stash_file(const std::filesystem::path& kit_dir) {
 }
 
 int run(int argc, char** argv) {
-    auto cwd = std::filesystem::current_path();
-    if (!kit::Repository::exists(cwd)) { logger::error("Not a kit repository."); return 1; }
-    kit::Repository repo(cwd);
+    auto repo_opt = kit::cmd::open_repo();
+    if (!repo_opt) return 1;
+    kit::Repository& repo = *repo_opt;
+    auto cwd = repo.path();
 
     bool is_pop = (argc >= 2 && std::string(argv[1]) == "pop");
 
@@ -64,11 +65,8 @@ int run(int argc, char** argv) {
     std::ostringstream stash_content;
     bool any = false;
 
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(cwd)) {
-        if (!entry.is_regular_file()) continue;
-        auto rel = std::filesystem::relative(entry.path(), cwd).string();
-        if (rel.rfind(".kit", 0) == 0) continue;
-        std::string content = kit::fs::read_file(entry.path());
+    for (const auto& [rel, abs] : kit::fs::working_files(cwd)) {
+        std::string content = kit::fs::read_file(abs);
         stash_content << rel << "\n" << content << "\n---\n";
         any = true;
     }
